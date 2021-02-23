@@ -40,7 +40,6 @@ class HardwareButtonsWatcherManager: PluginRegistry.ActivityResultListener {
             if (instance.activityLifecycleCallbacks == null) {
                 instance.currentActivity = activity
             }
-            instance.registerActivityLifecycleCallbacksIfNeeded()
             return instance
         }
     }
@@ -56,44 +55,6 @@ class HardwareButtonsWatcherManager: PluginRegistry.ActivityResultListener {
     private var userDeniedDrawOverlaysPermission = false
 
     private var screenOffWatcher: ScreenOffWatcher? = null
-
-    private fun registerActivityLifecycleCallbacksIfNeeded() {
-        if (activityLifecycleCallbacks == null) {
-            activityLifecycleCallbacks = object: EmptyActivityLifecycleCallbacks() {
-                override fun onActivityStarted(activity: Activity?) {
-                    currentActivity = activity
-
-                    // attach necessary watchers
-                    attachKeyWatcherIfNeeded()
-                }
-
-                override fun onActivityStopped(activity: Activity?) {
-                    if (currentActivity?.equals(activity) == true) {
-                        // detach all watchers
-                        detachKeyWatcher()
-                        // we do NOT detach ScreenOffWatcher here, because ScreenOffWatcher callback comes in after onActivityStopped.
-                        // We'll detach it in ScreenOffWatcher's callback.
-                    }
-                }
-
-                override fun onActivityDestroyed(activity: Activity?) {
-                    if (currentActivity?.equals(activity) == true) {
-                        currentActivity = null
-                        userDeniedDrawOverlaysPermission = false
-
-                        // remove all listeners and detach all watchers
-                        // When flutter app finishes, it doesn't invoke StreamHandler's onCancel() callback properly, so
-                        // we should manually clean up resources (i.e. listeners) when activity state becomes invalid (in order to avoid memory leak).
-                        // related: https://github.com/flutter/plugins/pull/1992/files/04df85fef5a994d93d89b02b27bb7789ec452528#diff-efd825c710217272904545db4b2198e2
-                        volumeButtonListeners.clear()
-                        detachKeyWatcher()
-                        detachScreenOffWatcher()
-                    }
-                }
-            }
-            application?.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
-        }
-    }
 
     fun addVolumeButtonListener(listener: VolumeButtonListener) {
         if (!volumeButtonListeners.contains(listener)) {
